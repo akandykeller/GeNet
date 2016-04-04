@@ -2,63 +2,65 @@ from urlparse import urljoin
 from bs4 import BeautifulSoup
 from random import randint
 from time import sleep
-import requests, csv, os
+import requests, csv, os, string, pickle, re
 
 SLEEPER = True
 BASE_URL = "http://genius.com"
 
-artist_urls = [#'http://genius.com/artists/Ab-soul', 
-               #'http://genius.com/artists/Action-bronson',
-               #'http://genius.com/artists/Aesop-rock',
-               #'http://genius.com/artists/Anderson-paak',
-               #'http://genius.com/artists/A-ap-ferg',
-               #'http://genius.com/artists/A-ap-mob',
-               #'http://genius.com/artists/A-ap-rocky',
-               #'http://genius.com/artists/Akon',
-               # 'http://genius.com/artists/Apollo-brown',
-               # 'http://genius.com/artists/Azizi-gibson',
-               # 'http://genius.com/artists/Big-sean',
-               # 'http://genius.com/artists/Boosie-badazz',
-               # 'http://genius.com/artists/Bet-hip-hop-awards',
-               # 'http://genius.com/artists/Busta-rhymes',
-               # 'http://genius.com/artists/Chance-the-rapper',
-               # 'http://genius.com/artists/Chief-keef',
-               # 'http://genius.com/artists/Childish-gambino',
-               # 'http://genius.com/artists/Curren-y',
-               # 'http://genius.com/artists/Casey-veggies',
-               # 'http://genius.com/artists/Denzel-curry',
-               # 'http://genius.com/artists/Drake',
-               # 'http://genius.com/artists/Drake-and-future',
-               # 'http://genius.com/artists/Dr-dre',
-               # 'http://genius.com/artists/E-40',
-               # 'http://genius.com/artists/Earl-sweatshirt',
-               # 'http://genius.com/artists/Eminem',
-               # 'http://genius.com/artists/Eazy-e',
-               # 'http://genius.com/artists/Fetty-wap',
-               # 'http://genius.com/artists/Flatbush-zombies',
-               # 'http://genius.com/artists/Freddie-gibbs',
-               # 'http://genius.com/artists/Future',
-               # 'http://genius.com/artists/Gucci-mane',
-               # 'http://genius.com/artists/G-unit',
-               # 'http://genius.com/artists/Gza',
-               # 'http://genius.com/artists/Iamsu',
-               # 'http://genius.com/artists/Ilovemakonnen',
-               # 'http://genius.com/artists/Jay-z',
-               # 'http://genius.com/artists/Jay-electronica',
-               # 'http://genius.com/artists/Joey-bada',
-               # 'http://genius.com/artists/Juicy-j',
-               # 'http://genius.com/artists/J-dilla',
-               # 'http://genius.com/artists/J-kwon',
-               # 'http://genius.com/artists/Kanye-west',
-               # 'http://genius.com/artists/Kendrick-lamar',
-               # 'http://genius.com/artists/Lil-wayne',
-               # 'http://genius.com/artists/Logic',
-               # 'http://genius.com/artists/Migos',
-               # 'http://genius.com/artists/Nas',
-               # 'http://genius.com/artists/The-notorious-big',
-               # 'http://genius.com/artists/Nwa',
-               # 'http://genius.com/artists/Odd-future',
-               # 'http://genius.com/artists/Oddisee',
+artist_url_file = 'artist_urls.p'
+
+rapper_urls = ['http://genius.com/artists/Ab-soul', 
+               'http://genius.com/artists/Action-bronson',
+               'http://genius.com/artists/Aesop-rock',
+               'http://genius.com/artists/Anderson-paak',
+               'http://genius.com/artists/A-ap-ferg',
+               'http://genius.com/artists/A-ap-mob',
+               'http://genius.com/artists/A-ap-rocky',
+               'http://genius.com/artists/Akon',
+               'http://genius.com/artists/Apollo-brown',
+               'http://genius.com/artists/Azizi-gibson',
+               'http://genius.com/artists/Big-sean',
+               'http://genius.com/artists/Boosie-badazz',
+               'http://genius.com/artists/Bet-hip-hop-awards',
+               'http://genius.com/artists/Busta-rhymes',
+               'http://genius.com/artists/Chance-the-rapper',
+               'http://genius.com/artists/Chief-keef',
+               'http://genius.com/artists/Childish-gambino',
+               'http://genius.com/artists/Curren-y',
+               'http://genius.com/artists/Casey-veggies',
+               'http://genius.com/artists/Denzel-curry',
+               'http://genius.com/artists/Drake',
+               'http://genius.com/artists/Drake-and-future',
+               'http://genius.com/artists/Dr-dre',
+               'http://genius.com/artists/E-40',
+               'http://genius.com/artists/Earl-sweatshirt',
+               'http://genius.com/artists/Eminem',
+               'http://genius.com/artists/Eazy-e',
+               'http://genius.com/artists/Fetty-wap',
+               'http://genius.com/artists/Flatbush-zombies',
+               'http://genius.com/artists/Freddie-gibbs',
+               'http://genius.com/artists/Future',
+               'http://genius.com/artists/Gucci-mane',
+               'http://genius.com/artists/G-unit',
+               'http://genius.com/artists/Gza',
+               'http://genius.com/artists/Iamsu',
+               'http://genius.com/artists/Ilovemakonnen',
+               'http://genius.com/artists/Jay-z',
+               'http://genius.com/artists/Jay-electronica',
+               'http://genius.com/artists/Joey-bada',
+               'http://genius.com/artists/Juicy-j',
+               'http://genius.com/artists/J-dilla',
+               'http://genius.com/artists/J-kwon',
+               'http://genius.com/artists/Kanye-west',
+               'http://genius.com/artists/Kendrick-lamar',
+               'http://genius.com/artists/Lil-wayne',
+               'http://genius.com/artists/Logic',
+               'http://genius.com/artists/Migos',
+               'http://genius.com/artists/Nas',
+               'http://genius.com/artists/The-notorious-big',
+               'http://genius.com/artists/Nwa',
+               'http://genius.com/artists/Odd-future',
+               'http://genius.com/artists/Oddisee',
                'http://genius.com/artists/Pusha-t',
                'http://genius.com/artists/Rae-sremmurd',
                'http://genius.com/artists/Rich-homie-quan',
@@ -77,7 +79,47 @@ artist_urls = [#'http://genius.com/artists/Ab-soul',
                'http://genius.com/artists/Yg',
                'http://genius.com/artists/Young-thug']
 
-for artist_url in artist_urls:
+max_letter_pages = 100
+
+artist_urls = []
+
+if os.path.isfile(artist_url_file):
+    with open(artist_url_file, 'r') as a_file:
+        artist_urls = pickle.load(a_file)
+else:
+    for letter in string.lowercase + '0':
+        for page in range(1,max_letter_pages):
+            page_url = "http://genius.com/artists-index/{}/all?page={}".format(letter, page)
+
+            print "_______LETTER {}__**__PAGE {}________".format(letter,page) * 10
+            
+            sleep(randint(100,200)/100.0)
+
+            response = requests.get(page_url, headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36'})
+            soup = BeautifulSoup(response.text, "lxml")
+
+            if len(soup.select('ul.artists_index_list > li > a')) < 1:
+                break
+
+            for song_link in soup.select('ul.artists_index_list > li > a'):
+                if song_link['href'] not in rapper_urls:
+                    artist_urls.append(song_link['href'])
+                    print(song_link['href'])
+
+    with open(artist_url_file, 'w') as a_file:
+        pickle.dump(artist_urls, a_file)
+
+with open('hiphop_artists.txt', 'r') as f: 
+  names = f.read().split('\n')
+
+  names_filt =  [re.sub(r'\[.*\]', '', n) for n in names]
+  hiphop_artists =  [re.sub(r'\(.*\)', '', n) for n in names_filt]
+  hiphop_artists = [h.replace('-', ' ').replace('.', '').lower() for h in hiphop_artists]
+
+url_names = [(i, a.split('/')[-1].replace('-', ' ').replace('.','').lower()) for i, a in enumerate(artist_urls)]
+hiphop_artist_urls = [artist_urls[i] for i, n in url_names if n in hiphop_artists]
+
+for artist_url in hiphop_artist_urls:
     print_all = False
 
     num_pages = 50
@@ -91,7 +133,6 @@ for artist_url in artist_urls:
         print "Created directory for current artist: {}".format(artist_dir)
 
     print "Crawling {}'s song list...".format(artist_name)
-
 
     for page_num in range(1,num_pages):
         print "_______PAGE {}________".format(page_num) * 10
@@ -109,7 +150,8 @@ for artist_url in artist_urls:
         response = requests.get(artist_page_url, headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36'})
         soup = BeautifulSoup(response.text, "lxml")
 
-
+        # Quit looking for more songs when you've reached the last page 
+        # (as signled by the song list being empty)
         if len(soup.select('ul.song_list > li > a')) < 1:
             break
 
@@ -139,14 +181,15 @@ for artist_url in artist_urls:
             lyric_file_name = file_name + "_LYRICS.txt"
             file_name += '.csv'
                 
-            if os.path.isfile(file_name):
+
+            # If the file already a file, dont create any new files
+            if len(referent_links) == 0 or os.path.isfile(file_name):
                 continue
 
             print "Writing lyrics to: {}".format(lyric_file_name)
             
             with open(lyric_file_name, "w") as text_file:
                 text_file.write(all_lyrics)
-
 
             print "Created a file for the song references: {}".format(file_name)
             fieldnames = ['Lyric', 'Ref']
@@ -165,8 +208,12 @@ for artist_url in artist_urls:
                     soup = BeautifulSoup(response.text)
                     #print soup
                     try:
-                        lyric = soup.find('meta', property="rap_genius:referent")['content'].encode('ascii', 'ignore').replace('\n', ' ')
-                        annot = soup.find('meta', property="rap_genius:body")['content'].encode('ascii', 'ignore').replace('\n',' ')
+                        # lyric = soup.find('meta', property="rap_genius:referent")['content'].encode('ascii', 'ignore').replace('\n', ' ')
+                        # annot = soup.find('meta', property="rap_genius:body")['content'].encode('ascii', 'ignore').replace('\n',' ')
+
+                        lyric = soup.find('meta', property="rap_genius:referent")['content'].encode('ascii', 'ignore')
+                        annot = soup.find('meta', property="rap_genius:body")['content'].encode('ascii', 'ignore')
+
                     except TypeError:
                         continue
 
