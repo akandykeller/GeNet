@@ -59,15 +59,14 @@ tf.app.flags.DEFINE_boolean("self_test", False,
 
 FLAGS = tf.app.flags.FLAGS
 
-# We use a number of buckets and pad to the closest one for efficiency.
-# See seq2seq_model.Seq2SeqModel for details of how they work.
-#_buckets = [(5, 10), (10, 15), (20, 25), (40, 50)]
-_buckets = [(10, 5), (15, 10), (25, 20), (50, 40)]
-
+# Bucket sizes were determined based on the .2, .4, .6, .8 and 1.0 quantiles 
+# of the dataset respectively. 
+_buckets = [(14, 7), (20, 10), (28, 12), (40, 17), (100, 40)]
 
 valid_chars = string.letters + string.digits + "\n" + " " + "."
 
 def valid_str(x):
+  """Remove all non alphanumeric characters from the given string."""
     text_filt = ""
     for char in x:
         if char in valid_chars:            
@@ -135,20 +134,15 @@ def create_model(session, forward_only):
 
 
 def train():
-  """Train a en->fr translation model using WMT data."""
-  # Prepare WMT data.
-  print("Preparing WMT data in %s" % FLAGS.data_dir)
-  #en_train, fr_train, en_dev, fr_dev, _, _ = data_utils.prepare_wmt_data(
-  #    FLAGS.data_dir, FLAGS.en_vocab_size, FLAGS.fr_vocab_size)
+  """Train a annotation->references translation model using genius.com data."""
 
-  #en_train = "/Users/AndyKeller/Desktop/UCSD/Projects/Rap_GeNet/rg_data/rg_references_short.ids40000.ref"
-  #fr_train = "/Users/AndyKeller/Desktop/UCSD/Projects/Rap_GeNet/rg_data/rg_lyrics_short.ids40000.lyr"
+  print("Preparing genius data in %s" % FLAGS.data_dir)
 
-  en_train = "rg_data/rg_references_train.ids40000.ref"
-  fr_train = "rg_data/rg_lyrics_train.ids40000.lyr"
+  ref_train = "rg_data/rg_references_train.ids40000.ref"
+  lyr_train = "rg_data/rg_lyrics_train.ids40000.lyr"
 
-  en_dev = "rg_data/rg_references_val.ids40000.ref"
-  fr_dev = "rg_data/rg_lyrics_val.ids40000.lyr"
+  ref_dev = "rg_data/rg_references_val.ids40000.ref"
+  lyr_dev = "rg_data/rg_lyrics_val.ids40000.lyr"
 
   with tf.Session() as sess:
     # Create model.
@@ -158,8 +152,8 @@ def train():
     # Read data into buckets and compute their sizes.
     print ("Reading development and training data (limit: %d)."
            % FLAGS.max_train_data_size)
-    dev_set = read_data(en_dev, fr_dev)
-    train_set = read_data(en_train, fr_train, FLAGS.max_train_data_size)
+    dev_set = read_data(ref_dev, lyr_dev)
+    train_set = read_data(ref_train, lyr_train, FLAGS.max_train_data_size)
     train_bucket_sizes = [len(train_set[b]) for b in xrange(len(_buckets))]
     train_total_size = float(sum(train_bucket_sizes))
 
@@ -223,13 +217,13 @@ def decode():
     model.batch_size = 1  # We decode one sentence at a time.
 
     # Load vocabularies.
-    en_vocab_path = os.path.join(FLAGS.data_dir,
+    ref_vocab_path = os.path.join(FLAGS.data_dir,
                                  "vocab.ref")
-    fr_vocab_path = os.path.join(FLAGS.data_dir,
+    lyr_vocab_path = os.path.join(FLAGS.data_dir,
                                  "vocab.lyr")
 
-    en_vocab, _ = data_utils.initialize_vocabulary(en_vocab_path)
-    _, rev_fr_vocab = data_utils.initialize_vocabulary(fr_vocab_path)
+    ref_vocab, _ = data_utils.initialize_vocabulary(ref_vocab_path)
+    _, rev_lyr_vocab = data_utils.initialize_vocabulary(lyr_vocab_path)
 
     # Decode from standard input.
     sys.stdout.write("> ")
@@ -239,7 +233,7 @@ def decode():
       sentence = valid_str(sentence)
 
       # Get token-ids for the input sentence.
-      token_ids = data_utils.sentence_to_token_ids(sentence, en_vocab)
+      token_ids = data_utils.sentence_to_token_ids(sentence, ref_vocab)
       # Which bucket does it belong to?
       bucket_id = min([b for b in xrange(len(_buckets))
                        if _buckets[b][0] > len(token_ids)])
@@ -255,7 +249,7 @@ def decode():
       if data_utils.EOS_ID in outputs:
         outputs = outputs[:outputs.index(data_utils.EOS_ID)]
       # Print out French sentence corresponding to outputs.
-      print(" ".join([rev_fr_vocab[output] for output in outputs]))
+      print(" ".join([rev_lyr_vocab[output] for output in outputs]))
       print("> ", end="")
       sys.stdout.flush()
       sentence = sys.stdin.readline()
