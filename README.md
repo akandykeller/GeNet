@@ -13,18 +13,18 @@ The dataset is still being gathered, and work is currently being done to conditi
 Below are some examples from a preliminary model which achieved a perplexity of ~20:
 
 Good:
-“he reminds the listener that he is from compton” -> “im from that cpt”
-"he has guns in the trunk of his car” -> “choppas in the trunk”
-"slang for money” -> “cheese"
-“he makes more money than bill gates” -> “im getting commas"
+* “he reminds the listener that he is from compton” -> “im from that cpt”
+* "he has guns in the trunk of his car” -> “choppas in the trunk”
+* "slang for money” -> “cheese"
+* “he makes more money than bill gates” -> “im getting commas"
 
 Missed direct meaning, but somewhat related :
-"he describes his time in jail and how it hurt him” -> “i forgot my way”
-“he likes his gun” -> “heater i spray"
+* "he describes his time in jail and how it hurt him” -> “i forgot my way”
+* “he likes his gun” -> “heater i spray"
 
 Wrong:
-"he makes more money than anyone” -> “i than richer than more"
-"he asks his friend where the stash spot is for the money” -> “where where where the spot spot”
-“even if he got caught he wouldnt talk to the police” -> “if i caught the police"
+* "he makes more money than anyone” -> “i than richer than more"
+* "he asks his friend where the stash spot is for the money” -> “where w here where the spot spot”
+* “even if he got caught he wouldnt talk to the police” -> “if i caught the police"
 
 The output is expected to improve with the full larger, groomed, dataset and with a larger network.
