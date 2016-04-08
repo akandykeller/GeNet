@@ -65,15 +65,6 @@ _buckets = [(14, 7), (20, 10), (28, 12), (40, 17), (100, 40)]
 
 valid_chars = string.letters + string.digits + "\n" + " " + "."
 
-def valid_str(x):
-  """Remove all non alphanumeric characters from the given string."""
-    text_filt = ""
-    for char in x:
-        if char in valid_chars:            
-            text_filt += char
-    return text_filt.replace('50', 'fifty').replace('.', ' . ').replace('&',' and ').lower()
-
-
 def read_data(source_path, target_path, max_size=None):
   """Read data from source and target files and put into buckets.
 
@@ -208,6 +199,15 @@ def train():
           eval_ppx = math.exp(eval_loss) if eval_loss < 300 else float('inf')
           print("  eval: bucket %d perplexity %.2f" % (bucket_id, eval_ppx))
         sys.stdout.flush()
+
+
+def valid_str(x):
+  """Formats strings to be decoded in the same format as training data."""
+    text_filt = ""
+    for char in x:
+        if char in valid_chars:            
+            text_filt += char
+    return text_filt.replace('50', 'fifty').replace('.', ' . ').replace('&',' and ').lower()
 
 
 def decode():
