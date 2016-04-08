@@ -2,90 +2,21 @@ from urlparse import urljoin
 from bs4 import BeautifulSoup
 from random import randint
 from time import sleep
+import numpy as np
 import requests, csv, os, string, pickle, re
 
-SLEEPER = True
+SLEEPER = True  # Enable sleep between requests to slow crawler
 BASE_URL = "http://genius.com"
-
-artist_url_file = 'artist_urls.p'
-
-rapper_urls = ['http://genius.com/artists/Ab-soul', 
-               'http://genius.com/artists/Action-bronson',
-               'http://genius.com/artists/Aesop-rock',
-               'http://genius.com/artists/Anderson-paak',
-               'http://genius.com/artists/A-ap-ferg',
-               'http://genius.com/artists/A-ap-mob',
-               'http://genius.com/artists/A-ap-rocky',
-               'http://genius.com/artists/Akon',
-               'http://genius.com/artists/Apollo-brown',
-               'http://genius.com/artists/Azizi-gibson',
-               'http://genius.com/artists/Big-sean',
-               'http://genius.com/artists/Boosie-badazz',
-               'http://genius.com/artists/Bet-hip-hop-awards',
-               'http://genius.com/artists/Busta-rhymes',
-               'http://genius.com/artists/Chance-the-rapper',
-               'http://genius.com/artists/Chief-keef',
-               'http://genius.com/artists/Childish-gambino',
-               'http://genius.com/artists/Curren-y',
-               'http://genius.com/artists/Casey-veggies',
-               'http://genius.com/artists/Denzel-curry',
-               'http://genius.com/artists/Drake',
-               'http://genius.com/artists/Drake-and-future',
-               'http://genius.com/artists/Dr-dre',
-               'http://genius.com/artists/E-40',
-               'http://genius.com/artists/Earl-sweatshirt',
-               'http://genius.com/artists/Eminem',
-               'http://genius.com/artists/Eazy-e',
-               'http://genius.com/artists/Fetty-wap',
-               'http://genius.com/artists/Flatbush-zombies',
-               'http://genius.com/artists/Freddie-gibbs',
-               'http://genius.com/artists/Future',
-               'http://genius.com/artists/Gucci-mane',
-               'http://genius.com/artists/G-unit',
-               'http://genius.com/artists/Gza',
-               'http://genius.com/artists/Iamsu',
-               'http://genius.com/artists/Ilovemakonnen',
-               'http://genius.com/artists/Jay-z',
-               'http://genius.com/artists/Jay-electronica',
-               'http://genius.com/artists/Joey-bada',
-               'http://genius.com/artists/Juicy-j',
-               'http://genius.com/artists/J-dilla',
-               'http://genius.com/artists/J-kwon',
-               'http://genius.com/artists/Kanye-west',
-               'http://genius.com/artists/Kendrick-lamar',
-               'http://genius.com/artists/Lil-wayne',
-               'http://genius.com/artists/Logic',
-               'http://genius.com/artists/Migos',
-               'http://genius.com/artists/Nas',
-               'http://genius.com/artists/The-notorious-big',
-               'http://genius.com/artists/Nwa',
-               'http://genius.com/artists/Odd-future',
-               'http://genius.com/artists/Oddisee',
-               'http://genius.com/artists/Pusha-t',
-               'http://genius.com/artists/Rae-sremmurd',
-               'http://genius.com/artists/Rich-homie-quan',
-               'http://genius.com/artists/Rich-gang',
-               'http://genius.com/artists/Rick-ross',
-               'http://genius.com/artists/Rza',
-               'http://genius.com/artists/Schoolboy-q',
-               'http://genius.com/artists/Snoop-dogg',
-               'http://genius.com/artists/Tech-n9ne',
-               'http://genius.com/artists/Tory-lanez',
-               'http://genius.com/artists/Ty-dolla-sign',
-               'http://genius.com/artists/Tyler-the-creator',
-               'http://genius.com/artists/Tyga',
-               'http://genius.com/artists/Wiz-khalifa',
-               'http://genius.com/artists/Wu-tang-clan',
-               'http://genius.com/artists/Yg',
-               'http://genius.com/artists/Young-thug']
-
+all_artists_file = 'hiphop_artists.txt'  # File which contains plaintext names of all desired artists
+artist_url_file = 'artist_urls.p'  # File name to save scraped list of all artists
 max_letter_pages = 100
-
 artist_urls = []
 
+# If we've already scraped the list of artist URLS for all desired artists, just load it
 if os.path.isfile(artist_url_file):
     with open(artist_url_file, 'r') as a_file:
         artist_urls = pickle.load(a_file)
+# Otherwise re-scrape it
 else:
     for letter in string.lowercase + '0':
         for page in range(1,max_letter_pages):
@@ -93,59 +24,82 @@ else:
 
             print "_______LETTER {}__**__PAGE {}________".format(letter,page) * 10
             
-            sleep(randint(100,200)/100.0)
+            if SLEEPER:
+                sleep(randint(100,200)/100.0)
 
             response = requests.get(page_url, headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36'})
             soup = BeautifulSoup(response.text, "lxml")
 
+            # Move to the next letter if there are no more artists on this page (meaning letter is done)
             if len(soup.select('ul.artists_index_list > li > a')) < 1:
                 break
 
             for song_link in soup.select('ul.artists_index_list > li > a'):
-                if song_link['href'] not in rapper_urls:
-                    artist_urls.append(song_link['href'])
-                    print(song_link['href'])
+                artist_urls.append(song_link['href'])
 
     with open(artist_url_file, 'w') as a_file:
         pickle.dump(artist_urls, a_file)
 
-with open('hiphop_artists.txt', 'r') as f: 
+# Read the names of all artists 
+with open(all_artists_file, 'r') as f: 
   names = f.read().split('\n')
 
+  # Filter names to remove items in parenthesis and brackets
   names_filt =  [re.sub(r'\[.*\]', '', n) for n in names]
   hiphop_artists =  [re.sub(r'\(.*\)', '', n) for n in names_filt]
+  # Get the final list of names which match the format of the URL names
   hiphop_artists = [h.replace('-', ' ').replace('.', '').lower() for h in hiphop_artists]
 
+# Convert the artist names from the URL to a free text name in the same format as hiphop_artists
 url_names = [(i, a.split('/')[-1].replace('-', ' ').replace('.','').lower()) for i, a in enumerate(artist_urls)]
+# Only save urls for artists that are in our list
 hiphop_artist_urls = [artist_urls[i] for i, n in url_names if n in hiphop_artists]
 
+# For each artist, scan over their song list and scrape all Lyrics along with all
+# lyric <-> annotation pairs. Lyrics are saved to $SONG_NAME + _LYRICS.txt, annotation
+# lyric pairs are saved to $SONG_NAME.csv. All artists are saved to their own directories. 
 for artist_url in hiphop_artist_urls:
     print_all = False
 
-    num_pages = 50
+    num_pages = 50 # Maximum number of pages to scrape for each artist 
 
     artist_name = artist_url.split('/')[-1].replace('/','')
-
     artist_dir = artist_name.replace(' ', '_')
+
+    # Define the default starting page for the artist to be 1
+    start_page = 1
 
     if not os.path.isdir(artist_dir):
         os.mkdir(artist_dir)
         print "Created directory for current artist: {}".format(artist_dir)
+    else:
+        print "Artist dir {} exists".format(artist_dir)
+
+        # Check if the .artist_done file has been added, meaning we can skip to the next artist
+        if os.path.isfile(artist_dir + '/.artist_done'):
+            print "Artist Complete. Skipping."
+            continue
+
+        # There are 20 songs max per page, so we can get a rough estimate of the page number 
+        # by dividing number of files by 20... problem is we dont make a file for every song
+        start_page = int(np.ceil(len([x for x in os.listdir(artist_dir) if 'LYRICS' in x]) / 20.0))
+        print "Found {} full pages, starting at {}".format(start_page - 1, start_page)
 
     print "Crawling {}'s song list...".format(artist_name)
 
-    for page_num in range(1,num_pages):
+    # Keep making page requests until there are no more songs on a given page
+    for page_num in range(start_page,num_pages):
         print "_______PAGE {}________".format(page_num) * 10
-        #artist_url = "http://genius.com/artists/songs?for_artist_page=556&id=Tony-yayo&page={}".format(page_num)
 
         response = requests.get(artist_url, headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36'})
         soup = BeautifulSoup(response.text, "lxml")
-
+        # Extract artist id from page
         artist_id = soup.select('form.edit_artist')[0]['id'].split('_')[-1]
-
+        # Formulate request url
         artist_page_url = "http://genius.com/artists/songs?for_artist_page={}&id={}&page={}".format(artist_id, artist_name, page_num)
 
-        sleep(randint(10,100)/100.0)
+        if SLEEPER:
+            sleep(randint(50,150)/100.0)
 
         response = requests.get(artist_page_url, headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36'})
         soup = BeautifulSoup(response.text, "lxml")
@@ -165,23 +119,29 @@ for artist_url in hiphop_artist_urls:
             response = requests.get(link)
             soup = BeautifulSoup(response.text)
 
-            all_lyrics = soup.find('lyrics').text.encode('ascii', 'ignore').strip()
+            # Try to scrape all lyrics and encode as ascii
+            try:
+                all_lyrics = soup.find('lyrics').text.encode('ascii', 'ignore').strip()
+            except AttributeError:
+                continue
 
+            # Get list of all links for annotations
             referent_links = [urljoin(BASE_URL, x['href']) for x in soup.find('lyrics').find_all('a', class_='referent')]
-
             song_title = song_title.replace('.', '').replace(' ', '_').replace('"','\'').replace('/','_').replace('(','').replace(')','').strip()
             
+            # Clip song title length to reasonable file name length
             if len(song_title) > 200:
                 song_title = song_title[0:200]
 
             file_name = artist_dir + "/" + song_title
+
+            # Uncomment below if you dont want to overwrite files
             # while os.path.isfile(file_name):
             #     file_name += '_new'
 
             lyric_file_name = file_name + "_LYRICS.txt"
             file_name += '.csv'
                 
-
             # If the file already a file, dont create any new files
             if len(referent_links) == 0 or os.path.isfile(file_name):
                 continue
@@ -198,25 +158,22 @@ for artist_url in hiphop_artist_urls:
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter='|')
                 writer.writeheader()
             
+                # Loop over all annotation links and write a line to the csv file with 
+                # both the annotation and the lyric
                 for ref_link in referent_links:
 
                     if SLEEPER:
                         sleep(randint(1,15)/100.0)
 
-                    #print ref_link
                     response = requests.get(ref_link)
                     soup = BeautifulSoup(response.text)
-                    #print soup
                     try:
-                        # lyric = soup.find('meta', property="rap_genius:referent")['content'].encode('ascii', 'ignore').replace('\n', ' ')
-                        # annot = soup.find('meta', property="rap_genius:body")['content'].encode('ascii', 'ignore').replace('\n',' ')
-
                         lyric = soup.find('meta', property="rap_genius:referent")['content'].encode('ascii', 'ignore')
                         annot = soup.find('meta', property="rap_genius:body")['content'].encode('ascii', 'ignore')
-
                     except TypeError:
                         continue
 
+                    # Since we use | as csv delimiter, remove it from text
                     lyric = lyric.replace('|', '')
                     annot = annot.replace('|', '')
 
@@ -226,3 +183,7 @@ for artist_url in hiphop_artist_urls:
                         print "Lyric: {}".format(lyric)
                         print "Annot: {}".format(annot)
                         print "--"*20
+    # Create the .artist_done file in the artists directory when we are done so we dont
+    # loop again
+    with open(artist_dir + '/.artist_done','w') as f:
+        f.write(' ')
