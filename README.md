@@ -24,7 +24,7 @@ Missed direct meaning, but somewhat related :
 
 Wrong:
 * "he makes more money than anyone” -> “i than richer than more"
-* "he asks his friend where the stash spot is for the money” -> “where w here where the spot spot”
+* "he asks his friend where the stash spot is for the money” -> “where where where the spot spot”
 * “even if he got caught he wouldnt talk to the police” -> “if i caught the police"
 
 The output is expected to improve with the full larger, groomed, dataset and with a larger network.
